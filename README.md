@@ -1,199 +1,90 @@
 # ContractGraphEval: Multi-Judge Benchmarking and Agentic Uncertainty-Aware Refinement
 
-[![Paper](https://img.shields.io/badge/Paper-ACLing%202025-blue)](https://doi.org/10.1016/j.procs.2025.xx.xxx)
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey)](http://creativecommons.org/licenses/by-nc-nd/4.0/)
+[![Paper](https://img.shields.io/badge/Paper-Procedia%20CS%20275%20(2026)-blue)](https://doi.org/10.1016/j.procs.2026.01.060)
+[![Dataset](https://img.shields.io/badge/Dataset-Hugging%20Face-yellow)](https://huggingface.co/datasets/moriyad/ContractGraphEval)
+[![Code: MIT](https://img.shields.io/badge/Code-MIT-green.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-Official repository for **"LLM as a Judge for Evaluating Contract Graphs: Multi-Judge Benchmarking and Agentic Uncertainty-Aware Refinement"** (ACLing 2025).
+Official repository for **"LLM as a Judge for Evaluating Contract Graphs: Multi-Judge Benchmarking and Agentic Uncertainty-Aware Refinement"**, presented at ACLing 2025 and published in *Procedia Computer Science* 275 (2026) 513–522.
 
 ## Overview
 
-This repository provides:
+- **ContractGraphEval**: 150 contract clauses, each with a reference graph, a model-predicted graph, judge scores and uncertainty estimates. Also on [Hugging Face](https://huggingface.co/datasets/moriyad/ContractGraphEval).
+- **Multi-judge evaluation**: eight reference-based scores and seven reference-free checks per sample.
+- **Calibration analysis**: ROC-AUC, expected calibration error, and bootstrap confidence intervals.
+- **Agentic refinement**: an uncertainty-driven Planner–Refiner–Verifier loop that refines only the samples most likely to be wrong.
 
-- **ContractGraphEval v1.0**: The first benchmark for clause-level legal knowledge graph extraction with calibrated uncertainty scores
-- **Multi-Judge Evaluation Pipeline**: 17 complementary judges (9 reference-based + 8 reference-free)
-- **Calibration Analysis**: ECE, ROC-AUC, and bootstrap confidence intervals
-- **Agentic Refinement**: Uncertainty-driven Planner–Refiner–Verifier loop
-
-### Key Results
-
-| Metric | Value |
-|--------|-------|
-| CV-based Error Detection AUC | **0.982** |
-| Calibration (ECE) | 0.027 |
-| Error Recall @ 10% Budget | 91% |
-| Cost Reduction vs Blind Refinement | **90%** |
-
-## Repository Structure
-
-```
-ContractGraphEval/
-├── README.md
-├── requirements.txt
-├── LICENSE
-├── benchmark/
-│   └── ContractGraphEval_v1.0.jsonl      # 150 annotated samples
-├── notebooks/
-│   ├── 1_multiJudgeEvalOnPredictions.ipynb   # Multi-judge evaluation pipeline
-│   ├── 2_calibrationEval.ipynb               # Calibration & ROC analysis
-│   └── 3_uncertaintyAwareAgenticRefinement.ipynb  # Selective refinement
-└── paper/
-    └── Multi-Judge-Benchmarking-Agentic-Uncertainty-Aware-Refinement.pdf
-```
-
-## Benchmark: ContractGraphEval v1.0
-
-Each sample in `ContractGraphEval_v1.0.jsonl` contains:
-
-| Field | Description |
-|-------|-------------|
-| `sample_id` | Unique identifier |
-| `clause` | Source contract clause text |
-| `gold_graph` | Expert-annotated knowledge graph |
-| `prediction` | Model-generated graph (GRPO-trained Llama-3.1-8B) |
-| `judge_scores` | 9 reference-based judge scores |
-| `reference_free_judges` | 8 reference-free judge scores |
-| `uncertainty` | CV, entropy, variance, and 5 other disagreement metrics |
-| `evaluation` | `has_error` label and aggregate scores |
-
-### Judge Categories
-
-**Reference-Based (Research Evaluation)**
-- Structural F1, Graph Edit Distance, Exact Match
-- Semantic Similarity, Completeness, Hybrid Score
-- Parse Success, OpenAI Issues, Gemini Changes
-
-**Reference-Free (Production Deployment)**
-- Unused Definitions, Undefined References, Duplicate Definitions
-- Orphan Nodes, Isolated Components
-- Domain-Range Validity, Ontology Compliance
-
-## Quick Start
-
-### Installation
+## Quick start
 
 ```bash
-git clone https://github.com/yourusername/ContractGraphEval.git
-cd ContractGraphEval
-pip install -r requirements.txt
+git clone https://github.com/moriyadechtiar/ensemble-graph-eval.git
+cd ensemble-graph-eval
+python examples/selective_review.py --budget 0.10      # standard library only
 ```
 
-### Load the Benchmark
+This ranks the benchmark samples by estimated risk and lists the share you would send for review. Point it at your own scored predictions with `--file`, or rank by another field with `--score uncertainty.cv`.
+
+Load the benchmark:
 
 ```python
-import json
+from datasets import load_dataset
 
-samples = []
-with open('benchmark/ContractGraphEval_v1.0.jsonl', 'r') as f:
-    for line in f:
-        samples.append(json.loads(line))
-
-print(f"Loaded {len(samples)} samples")
-
-# Access uncertainty metrics
-for sample in samples[:3]:
-    cv = sample['uncertainty']['cv']
-    has_error = sample['evaluation']['has_error']
-    print(f"CV: {cv:.3f}, Error: {has_error}")
+ds = load_dataset("moriyad/ContractGraphEval", split="validation")
+s = ds[0]
+s["clause"]["text"], s["judge_scores"]["hybrid"], s["error_prediction"]["p_error_calibrated"]
 ```
 
-### Compute Selective Refinement Threshold
+The same data is in `benchmark/` as JSON Lines. Field descriptions are on the dataset card. Results are reported in the [paper](https://doi.org/10.1016/j.procs.2026.01.060).
 
-```python
-import numpy as np
+## Repository structure
 
-cvs = [s['uncertainty']['cv'] for s in samples]
-errors = [s['evaluation']['has_error'] for s in samples]
-
-# CV > 0.15 threshold captures 91% of errors at 10% budget
-threshold = 0.15
-flagged = [cv > threshold for cv in cvs]
-recall = sum(e and f for e, f in zip(errors, flagged)) / sum(errors)
-print(f"Error recall at CV > {threshold}: {recall:.1%}")
+```
+ensemble-graph-eval/
+├── benchmark/        ContractGraphEval (JSON Lines)
+├── notebooks/        evaluation, calibration, and refinement notebooks
+├── examples/         selective_review.py
+└── paper/            the published paper
 ```
 
 ## Notebooks
 
-### 1. Multi-Judge Evaluation (`1_multiJudgeEvalOnPredictions.ipynb`)
+- **`multiJudgeEvalOnPredictions.ipynb`**: runs the judges on model predictions.
+- **`calibrationEval.ipynb`**: ROC-AUC, calibration error, bootstrap intervals, and the review-budget table.
+- **`uncertaintyAwareAgenticRefinement.ipynb`**: the Planner–Refiner–Verifier loop.
 
-Runs all 17 judges on model predictions:
-- Structural judges (F1, GED, Parse Success)
-- Semantic judges (embedding similarity, completeness)
-- LLM judges (OpenAI, Gemini issue detection)
-- Contract linters (orphans, broken references)
-
-**Configuration:**
-```python
-# Set your data paths
-PREDICTIONS_DIR = Path("./data/predictions")
-OUTPUT_DIR = Path("./outputs/judge_scores")
-```
-
-### 2. Calibration Analysis (`2_calibrationEval.ipynb`)
-
-Statistical validation of uncertainty signals:
-- ROC-AUC for each disagreement metric
-- Expected Calibration Error (ECE)
-- Bootstrap confidence intervals (2,000 resamples)
-- Leave-One-Judge-Out (LOJO) analysis
-
-**Key Output:** Table 1 and Figure 1 from the paper
-
-### 3. Agentic Refinement (`3_uncertaintyAwareAgenticRefinement.ipynb`)
-
-Implements the Planner–Refiner–Verifier loop:
-- Routes predictions based on CV threshold
-- Applies GPT-4 refinement only to high-uncertainty samples
-- Evaluates quality improvement and cost savings
-
-**Configuration:**
-```python
-# Set your data paths
-PREDICTIONS_PATH = "./data/predictions.jsonl"
-JUDGE_SCORES_PATH = "./outputs/judge_scores_summary.csv"
-```
-
-## Configuration
-
-The notebooks use Google Colab by default. To run locally:
-
-1. Update the path variables in each notebook's Configuration section
-2. Set API keys as environment variables:
-   ```bash
-   export OPENAI_API_KEY="your-key"
-   export GEMINI_API_KEY="your-key"  # optional
-   ```
+The notebooks were written for Google Colab and read from Google Drive paths. To run them elsewhere, update the path variables in each Configuration cell, install `requirements.txt`, and set `OPENAI_API_KEY`.
 
 ## Citation
 
-If you use ContractGraphEval or our multi-judge framework, please cite:
-
 ```bibtex
-@inproceedings{dechtiar2025llmjudge,
-  title={LLM as a Judge for Evaluating Contract Graphs: Multi-Judge Benchmarking and Agentic Uncertainty-Aware Refinement},
-  author={Dechtiar, Moriya and Katz, Daniel Martin and Jaume, Sylvain and Wang, Hongming},
-  booktitle={Proceedings of the 7th International Conference on AI in Computational Linguistics (ACLing 2025)},
-  year={2025},
-  publisher={Elsevier},
-  note={Procedia Computer Science}
+@article{dechtiar2026llmjudge,
+  title   = {LLM as a Judge for Evaluating Contract Graphs: Multi-Judge Benchmarking and Agentic Uncertainty-Aware Refinement},
+  author  = {Dechtiar, Moriya and Katz, Daniel Martin and Jaume, Sylvain and Wang, Hongming},
+  journal = {Procedia Computer Science},
+  volume  = {275},
+  pages   = {513--522},
+  year    = {2026},
+  doi     = {10.1016/j.procs.2026.01.060}
 }
 ```
 
-## Related Work
+## Related repositories
 
-This benchmark builds on [GRAPH-GRPO-LEX](https://ssrn.com/abstract=5566538), which introduced the contract graph ontology and GRPO training methodology.
+| Repository | Paper | Contents |
+|---|---|---|
+| [ContractSmellsAutoLabelDetection](https://github.com/moriyadechtiar/ContractSmellsAutoLabelDetection) | *Machine Learning with Applications* 20 (2025) 100639 | Contract-smell labeling and detection |
+| [graph-grpo-lex](https://github.com/moriyadechtiar/graph-grpo-lex) | IEEE ICDMW 2025, pp. 767–776 | Contract graphs, gated GRPO training, contract linter |
+| [ensemble-graph-eval](https://github.com/moriyadechtiar/ensemble-graph-eval) | *Procedia Computer Science* 275 (2026) 513–522 | ContractGraphEval benchmark and multi-judge evaluation |
 
 ## License
 
-This work is licensed under [CC BY-NC-ND 4.0](http://creativecommons.org/licenses/by-nc-nd/4.0/).
-
-- **Benchmark data**: Available for research use
-- **Code**: MIT License (see notebooks)
+- **Code** (notebooks and scripts): MIT. See [`LICENSE`](LICENSE).
+- **Benchmark data and paper**: CC BY-NC-ND 4.0. See [`LICENSE-DATA.md`](LICENSE-DATA.md).
+- Clause text comes from [CUAD](https://www.atticusprojectai.org/cuad) (The Atticus Project, CC BY 4.0).
 
 ## Contact
 
-- **Moriya Dechtiar** - moriya.dechtiar@alumni.harvard.edu
-- Issues and PRs welcome!
+Moriya Dechtiar, moriya.dechtiar@alumni.harvard.edu. Issues and pull requests are welcome.
 
 ## Acknowledgments
 

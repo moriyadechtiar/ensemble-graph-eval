@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use ContractGraphEval or this code, please cite the paper below."
+title: "ContractGraphEval: Multi-Judge Benchmarking and Agentic Uncertainty-Aware Refinement"
+authors:
+  - family-names: Dechtiar
+    given-names: Moriya
+repository-code: "https://github.com/moriyadechtiar/ensemble-graph-eval"
+license: MIT
+preferred-citation:
+  type: article
+  title: "LLM as a Judge for Evaluating Contract Graphs: Multi-Judge Benchmarking and Agentic Uncertainty-Aware Refinement"
+  authors:
+    - family-names: Dechtiar
+      given-names: Moriya
+    - family-names: Katz
+      given-names: Daniel Martin
+    - family-names: Jaume
+      given-names: Sylvain
+    - family-names: Wang
+      given-names: Hongming
+  journal: "Procedia Computer Science"
+  volume: 275
+  start: 513
+  end: 522
+  year: 2026
+  doi: "10.1016/j.procs.2026.01.060"
