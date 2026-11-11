@@ -10,7 +10,7 @@ Official repository for **"LLM as a Judge for Evaluating Contract Graphs: Multi-
 ## Overview
 
 - **ContractGraphEval**: 150 contract clauses, each with a reference graph, a model-predicted graph, judge scores and uncertainty estimates. Also on [Hugging Face](https://huggingface.co/datasets/moriyad/ContractGraphEval).
-- **Multi-judge evaluation**: eight reference-based scores and seven reference-free checks per sample.
+- **Multi-judge evaluation**: the `contract_graph_eval` package scores a predicted graph with eight reference-based judges and seven reference-free checks, and measures how much the judges disagree.
 - **Calibration analysis**: ROC-AUC, expected calibration error, and bootstrap confidence intervals.
 - **Agentic refinement**: an uncertainty-driven Planner–Refiner–Verifier loop that refines only the samples most likely to be wrong.
 
@@ -36,14 +36,49 @@ s["clause"]["text"], s["judge_scores"]["hybrid"], s["error_prediction"]["p_error
 
 The same data is in `benchmark/` as JSON Lines. Field descriptions are on the dataset card. Results are reported in the [paper](https://doi.org/10.1016/j.procs.2026.01.060).
 
+## Evaluate your own predictions
+
+```bash
+pip install -e .                                   # needs only numpy
+python -m contract_graph_eval examples/example_predictions.jsonl
+python -m contract_graph_eval your_predictions.jsonl --out scored.jsonl
+```
+
+Each line of the input is a JSON object with a `prediction` and a `gold_graph`, as in the example file. The command scores every prediction with each judge, measures how much the judges disagree, and lists the highest-risk predictions for review.
+
+From Python:
+
+```python
+from contract_graph_eval import evaluate
+
+result = evaluate(predicted_graph, reference_graph)
+result["judge_scores"]             # one score per judge, in [0, 1]
+result["uncertainty"]["cv"]        # disagreement between the judges
+result["mean_risk"]                # used to rank predictions for review
+result["reference_free_judges"]    # checks that need no reference graph
+```
+
+| Judge | Measures | Needs |
+|---|---|---|
+| `structural_f1` | Node and edge overlap with the reference | — |
+| `completeness` | How much of the reference the prediction covers | — |
+| `graph_edit_distance` | Edits needed to turn the prediction into the reference | — |
+| `exact_match`, `parse_success` | Identical graph; valid, well-formed output | — |
+| `semantic_similarity`, `hybrid` | Embedding similarity, and its average with `structural_f1` | `pip install -e ".[semantic]"`, then `--semantic` |
+| `openai_issues` | An LLM lists the issues and gives a score | `pip install -e ".[llm]"`, `OPENAI_API_KEY`, then `--llm` |
+
+`contract_graph_eval.calibrate` turns risk into a probability of error with out-of-sample isotonic calibration (`pip install -e ".[calibration]"`). Tests: `python -m pytest -q`.
+
 ## Repository structure
 
 ```
 ensemble-graph-eval/
-├── benchmark/        ContractGraphEval (JSON Lines)
-├── notebooks/        evaluation, calibration, and refinement notebooks
-├── examples/         selective_review.py
-└── paper/            the published paper
+├── contract_graph_eval/   evaluation package: judges, uncertainty, review selection, command line
+├── tests/                 unit tests
+├── benchmark/             ContractGraphEval (JSON Lines)
+├── notebooks/             evaluation, calibration, and refinement notebooks
+├── examples/              example predictions and selective_review.py
+└── paper/                 the published paper
 ```
 
 ## Notebooks

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contract-graph-eval"
+version = "0.1.0"
+description = "Multi-judge evaluation of contract graphs, with judge disagreement as an uncertainty signal"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Moriya Dechtiar" }]
+dependencies = ["numpy>=1.21"]
+
+[project.optional-dependencies]
+semantic = ["sentence-transformers>=2.2"]
+llm = ["openai>=1.0"]
+calibration = ["scikit-learn>=1.0"]
+test = ["pytest>=7"]
+
+[project.scripts]
+contract-graph-eval = "contract_graph_eval.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/moriyadechtiar/ensemble-graph-eval"
+Paper = "https://doi.org/10.1016/j.procs.2026.01.060"
+
+[tool.setuptools]
+packages = ["contract_graph_eval"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
