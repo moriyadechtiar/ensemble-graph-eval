@@ -109,7 +109,6 @@ The notebooks were written for Google Colab and read from Google Drive paths. To
 |---|---|---|
 | [ContractSmellsAutoLabelDetection](https://github.com/moriyadechtiar/ContractSmellsAutoLabelDetection) | *Machine Learning with Applications* 20 (2025) 100639 | Contract-smell labeling and detection |
 | [graph-grpo-lex](https://github.com/moriyadechtiar/graph-grpo-lex) | IEEE ICDMW 2025, pp. 767–776 | Contract graphs, gated GRPO training, contract linter |
-| [ensemble-graph-eval](https://github.com/moriyadechtiar/ensemble-graph-eval) | *Procedia Computer Science* 275 (2026) 513–522 | ContractGraphEval benchmark and multi-judge evaluation |
 
 ## License
 
